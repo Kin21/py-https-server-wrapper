@@ -1,23 +1,17 @@
+```
 usage: https_logger.py [-h] [--no-https] [-p PORT] [--key-file KEY_FILE]
                        [--cert-file CERT_FILE]
                        [--server-version SERVER_VERSION]
                        [--sys-version SYS_VERSION] [-o LOG_FILE]
-                       [--log-format {txt,json-txt,csv}] [--url-decode]
-                       [-L REDIRECT | -f CONTENT_FILE]
-                       [--redirect-code {301,302,303,307,308}] [-H ADD_HEADER]
+                       [-of {txt,json-txt,csv}] [--url-decode] [-L REDIRECT]
+                       [-f CONTENT_FILE] [-if INCLUDE_FILE] [-w ALLOWED_FILE]
+                       [-id WWW] [--redirect-code {301,302,303,307,308}]
+                       [-H ADD_HEADER]
 
 Python simple HTTP server for different testing operations.
 
 options:
   -h, --help            show this help message and exit
-  -L REDIRECT, --redirect REDIRECT
-                        URL to redirect user. Can be combined --redirect-code,
-                        default https://example.com
-  -f CONTENT_FILE, --content-file CONTENT_FILE
-                        Return specified file content in response. Use-case:
-                        empty html with meta tag/JS script can be used to
-                        redirect user/collect additional info etc.
-  --redirect-code {301,302,303,307,308}
   -H ADD_HEADER, --add-header ADD_HEADER
                         Add custom HTTP header to response. Overwrites other
                         parameters e.g -L https://example.com -H 'Location:
@@ -47,10 +41,27 @@ Logging:
 
   -o LOG_FILE, --log-file LOG_FILE
                         Path to file where logs will be saved.
-  --log-format {txt,json-txt,csv}
+  -of {txt,json-txt,csv}, --log-format {txt,json-txt,csv}
                         Format for logging.
   --url-decode          Use urllib to decode Headers and Body from Requests.
                         Default: False
+
+CONTENT CONTROL:
+  -L REDIRECT, --redirect REDIRECT
+                        URL to redirect user. Can be combined --redirect-code,
+                        default https://example.com
+  -f CONTENT_FILE, --content-file CONTENT_FILE
+                        Return specified file content in response. It will be
+                        default file to serve. Use-case: empty html with meta
+                        tag/JS script can be used to redirect user/collect
+                        additional info etc.
+  -if INCLUDE_FILE, --include-file INCLUDE_FILE
+                        Allow to serve this files if allowed.
+  -w ALLOWED_FILE, --allowed-file ALLOWED_FILE
+                        Read files allowed to serve from specified ALLOWED-
+                        FILE
+  -id WWW, --www WWW    Directory where allowed files located
+  --redirect-code {301,302,303,307,308}
 
 EXAMPLES:
         https_logger.py --no-https
@@ -60,6 +71,17 @@ EXAMPLES:
         https_logger.py --no-https -f ~/scripts/logger.html
         https_logger.py --no-https -o /tmp/logs.txt --log-format txt
         https_logger.py --no-https -f ~/scripts/logger.html -L https://example.com --redirect-code 302
+ALLOW MULTIPLE FILES TO BE SERVER:
+        -f specified with combination of [-if, -w, -id] will be default file to serve if requested path not in allowed files. E.g index.html
+        -if and -w can be used together.
+        -id specified directory where files should be found. It will be appended to requested path to compare against allowed files.
+        Examples:
+                # Read allowed files that located in www folder, if requested path not found/allowed www/index.html will be served
+                find www -type f > allowed_files
+                python https_logger.py --no-https -o test.json -of json-txt  -f www/index.html -w allowed_files --www www
+                # Allow file to be served from current folder.
+                python /diskD/tools/pyhttps-server/https_logger.py --no-https -o test.json -of json-txt -if ./test.txt -if ./LICENSE
+
 REDIRECT:
         Read docs: https://developer.mozilla.org/en-US/docs/Web/HTTP/Redirections
 OUTPUT FORMATS EXAMPLES:
@@ -82,3 +104,4 @@ DEFAULT HEADERS:
 SECURITY WARNING:
         User controlled input will be logged to log file without any checks or validation.
         Python HTTP security warning: https://docs.python.org/3/library/http.server.html#security-considerations 
+```

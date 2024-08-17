@@ -18,6 +18,17 @@ EXAMPLES:
         {sys.argv[0]} --no-https -f ~/scripts/logger.html
         {sys.argv[0]} --no-https -o /tmp/logs.txt --log-format txt
         {sys.argv[0]} --no-https -f ~/scripts/logger.html -L https://example.com --redirect-code 302
+ALLOW MULTIPLE FILES TO BE SERVER:
+        -f specified with combination of [-if, -w, -id] will be default file to serve if requested path not in allowed files. E.g index.html
+        -if and -w can be used together.
+        -id specified directory where files should be found. It will be appended to requested path to compare against allowed files.
+        Examples:
+                # Read allowed files that located in www folder, if requested path not found/allowed www/index.html will be served
+                find www -type f > allowed_files
+                python {sys.argv[0]} --no-https -o test.json -of json-txt  -f www/index.html -w allowed_files --www www
+                # Allow file to be served from current folder.
+                python /diskD/tools/pyhttps-server/https_logger.py --no-https -o test.json -of json-txt -if ./test.txt -if ./LICENSE
+
 REDIRECT:
         Read docs: https://developer.mozilla.org/en-US/docs/Web/HTTP/Redirections
 OUTPUT FORMATS EXAMPLES:
@@ -57,18 +68,21 @@ server_header_group.add_argument('--sys-version', help='Default: ""')
 logging_group = parser.add_argument_group('Logging', 'Configure logging')
 logging_group.add_argument('-o', '--log-file', help='Path to file where logs will be saved.',
                            default=f'pyhttp{start_datetime_str}.log')
-logging_group.add_argument('--log-format', help='Format for logging.',
+logging_group.add_argument('-of', '--log-format', help='Format for logging.',
                            choices=['txt', 'json-txt', 'csv'], default='json-txt')
 logging_group.add_argument('--url-decode', help='Use urllib to decode Headers and Body from Requests. Default: False',
                            action='store_true')
 
-other_group = parser.add_mutually_exclusive_group()
+other_group = parser.add_argument_group('CONTENT CONTROL')
 other_group.add_argument('-L', '--redirect', help='URL to redirect user. Can be combined --redirect-code, default https://example.com')
-file_option_help = '''Return specified file content in response.
+file_option_help = '''Return specified file content in response. It will be default file to serve.
                       Use-case: empty html with meta tag/JS script can be used to redirect user/collect additional info etc.'''
 other_group.add_argument('-f', '--content-file', help=file_option_help)
+other_group.add_argument('-if', '--include-file', help='Allow to serve this files if allowed.', action='append', default=[])
+other_group.add_argument('-w', '--allowed-file', help='Read files allowed to serve from specified ALLOWED-FILE', default='')
+other_group.add_argument('-id', '--www', help='Directory where allowed files located', default='.')
 
-parser.add_argument('--redirect-code', choices=[301, 302, 303, 307, 308], default=301, type=int)
+other_group.add_argument('--redirect-code', choices=[301, 302, 303, 307, 308], default=301, type=int)
 add_header_help = '''Add custom HTTP header to response. 
                      Overwrites other parameters e.g -L https://example.com -H
                      'Location: https://test.com' will results in redirection to https://test.com'''
@@ -76,12 +90,15 @@ parser.add_argument('-H', '--add-header', help=add_header_help, action='append',
 args = parser.parse_args()
 
 
-def get_body():
-        if args.content_file:
+def get_body(http_handler_instance):
+        if (file_path := args.www+http_handler_instance.path.split('?')[0]) in args.allowed_files:
+                with open(file_path, 'rb') as f:
+                        data = f.read()
+                return data
+        elif args.content_file:
                 with open(args.content_file, 'rb') as f:
                         data = f.read()
                 return data
-        
         return b''
 
 def get_request_body(http_handler_instance):
@@ -139,8 +156,24 @@ def add_custom_headers(hhttp):
                         continue
                 hhttp.send_header(h, args.parsed_headers[h])
 
+def get_allowed_files():
+        if args.allowed_file:
+                try:
+                        with open(args.allowed_file, encoding='UTF-8') as f:
+                                allowed_to_serve = [file.strip() for file in f.readlines()]
+                except FileNotFoundError:
+                        print(f'File {args.allowed_file} not found !')
+                        exit(0)
+        else:
+                allowed_to_serve = []             
+        if args.include_file:
+                allowed_to_serve += args.include_file
+        return allowed_to_serve
+
 
 args.parsed_headers = get_arg_headers_dict()
+args.allowed_files = get_allowed_files()
+
 
 class MyHTTPHandler(BaseHTTPRequestHandler):
         protocol_version = 'HTTP/1.1'
@@ -164,7 +197,7 @@ class MyHTTPHandler(BaseHTTPRequestHandler):
                         add_custom_headers(self)
                         self.end_headers()
                 else:
-                        body_data = get_body()
+                        body_data = get_body(self)
                         self.send_response(200)
                         self.send_header('Content-Type', content_type_header_value)
                         self.send_header('Content-Length', len(body_data))
