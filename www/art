@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Animated ASCII Art</title>
+    <style>
+        body {
+            background-color: #000;
+            color: #00FF00;
+            font-family: "Courier New", Courier, monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        #ascii-art {
+            white-space: pre;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div id="ascii-art"></div>
+
+    <script>
+        const frames = [
+            ` 
+            ( o ) 
+             \\|/
+              |
+             / \\
+            `,
+            ` 
+             \\o/ 
+              | 
+             / \\
+            `,
+            ` 
+              o
+             /|\\
+             / \\
+            `,
+            ` 
+              o
+             /|\\
+            / \\ 
+            `,
+            ` 
+              o
+              |\\
+              |
+             / \\
+            `,
+            ` 
+              o
+             /|\\
+             / \\
+            `
+        ];
+
+        let currentFrame = 0;
+        const asciiArtDiv = document.getElementById('ascii-art');
+
+        function animateAscii() {
+            asciiArtDiv.textContent = frames[currentFrame];
+            currentFrame = (currentFrame + 1) % frames.length;
+            setTimeout(animateAscii, 300);
+        }
+
+        animateAscii();
+    </script>
+</body>
+</html>
